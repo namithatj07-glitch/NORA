@@ -1,0 +1,211 @@
+/* NORA Design Tokens and Base Accessible Styles */
+:root {
+  /* Default Theme: Soft Cream & Sage */
+  --bg-canvas: #FAF7F2;
+  --bg-surface: #FFFFFF;
+  --bg-surface-soft: #F4EFEA;
+  --bg-accent-soft: #EBF1ED;
+  --border-subtle: #E2DDD5;
+  --border-strong: #A8A196;
+  --border-focus: #52796F;
+
+  --text-primary: #1C2522;
+  --text-secondary: #3D4C46;
+  --text-muted: #64736E;
+
+  --brand-sage: #52796F;
+  --brand-sage-dark: #38524B;
+  --brand-sage-light: #769E93;
+  --brand-sage-bg: #EAF0EC;
+  --brand-sage-text: #203530;
+
+  --warm-amber: #B67139;
+  --warm-amber-bg: #FDF4EB;
+  --warm-amber-border: #E8C8A8;
+
+  --success-green: #2E6B4B;
+  --success-green-bg: #EDF7F1;
+  --success-green-border: #B7DFCA;
+
+  --card-shadow: 0 3px 12px rgba(35, 45, 40, 0.05), 0 1px 3px rgba(35, 45, 40, 0.04);
+  --card-shadow-hover: 0 8px 24px rgba(35, 45, 40, 0.08);
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
+
+  /* Large Accessible Font Defaults */
+  --font-xs: 0.85rem;
+  --font-sm: 1.0rem;
+  --font-base: 1.25rem; /* 20px */
+  --font-lg: 1.45rem;  /* 23px */
+  --font-xl: 1.75rem;  /* 28px */
+  --font-2xl: 2.2rem;  /* 35px */
+  --font-3xl: 2.75rem; /* 44px */
+
+  --btn-min-height: 54px;
+  --btn-padding: 14px 24px;
+}
+
+/* Text Size Variations */
+html[data-text-size="normal"] {
+  --font-xs: 0.78rem;
+  --font-sm: 0.9rem;
+  --font-base: 1.05rem; /* ~17px */
+  --font-lg: 1.25rem;
+  --font-xl: 1.5rem;
+  --font-2xl: 1.85rem;
+  --font-3xl: 2.3rem;
+  --btn-min-height: 48px;
+  --btn-padding: 12px 20px;
+}
+
+html[data-text-size="large"] {
+  --font-xs: 0.88rem;
+  --font-sm: 1.05rem;
+  --font-base: 1.25rem; /* ~20px */
+  --font-lg: 1.45rem;
+  --font-xl: 1.75rem;
+  --font-2xl: 2.2rem;
+  --font-3xl: 2.75rem;
+  --btn-min-height: 54px;
+  --btn-padding: 14px 26px;
+}
+
+html[data-text-size="xlarge"] {
+  --font-xs: 1.0rem;
+  --font-sm: 1.2rem;
+  --font-base: 1.45rem; /* ~23px */
+  --font-lg: 1.7rem;
+  --font-xl: 2.1rem;
+  --font-2xl: 2.6rem;
+  --font-3xl: 3.2rem;
+  --btn-min-height: 60px;
+  --btn-padding: 16px 30px;
+}
+
+/* High Contrast Theme */
+html[data-theme="highContrast"] {
+  --bg-canvas: #F8F9FA;
+  --bg-surface: #FFFFFF;
+  --bg-surface-soft: #E9ECEF;
+  --bg-accent-soft: #DDE5E1;
+  --border-subtle: #2B303A;
+  --border-strong: #000000;
+  --border-focus: #000000;
+
+  --text-primary: #000000;
+  --text-secondary: #111111;
+  --text-muted: #2E3440;
+
+  --brand-sage: #1C3E34;
+  --brand-sage-dark: #0F231D;
+  --brand-sage-light: #2D5E50;
+  --brand-sage-bg: #DCE7E2;
+  --brand-sage-text: #051410;
+
+  --warm-amber: #8A4612;
+  --warm-amber-bg: #FEEEDD;
+  --warm-amber-border: #6B340B;
+
+  --success-green: #11532E;
+  --success-green-bg: #DCF0E3;
+  --success-green-border: #0A3C20;
+
+  --card-shadow: 0 4px 0 #2B303A;
+}
+
+/* Warm Sepia Linen Theme */
+html[data-theme="sepia"] {
+  --bg-canvas: #F6F1E5;
+  --bg-surface: #FFFDF9;
+  --bg-surface-soft: #EDE4D0;
+  --bg-accent-soft: #E3E9DC;
+  --border-subtle: #D8CCA8;
+  --border-strong: #968666;
+  --border-focus: #566453;
+
+  --text-primary: #29241E;
+  --text-secondary: #473E34;
+  --text-muted: #6B6053;
+
+  --brand-sage: #5A695B;
+  --brand-sage-dark: #3F4B40;
+  --brand-sage-light: #778B78;
+  --brand-sage-bg: #E5EDE5;
+  --brand-sage-text: #222C23;
+
+  --warm-amber: #A4642C;
+  --warm-amber-bg: #FBF0DF;
+  --warm-amber-border: #DDC39C;
+
+  --success-green: #376C4A;
+  --success-green-bg: #E8F3EB;
+  --success-green-border: #B7D9C3;
+}
+
+/* Global Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  line-height: 1.65;
+  font-size: var(--font-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* Focus styles for keyboard accessibility */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 3px;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.28;
+}
+
+p {
+  color: var(--text-secondary);
+}
+
+/* High readability utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

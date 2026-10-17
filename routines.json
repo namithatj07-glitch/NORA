@@ -1,105 +1,27 @@
 
 {
-  "assistant_name": "NORA",
-  "person_name": "Alex",
-  "schedule_version": 1,
-  "routines": {
-    "morning": [
-      {
-        "task": "Get dressed",
-        "items": [
-          "clean shirt",
-          "trousers",
-          "socks"
-        ],
-        "steps": [
-          "Let's get dressed.",
-          "First, put on your shirt.",
-          "Next, put on your trousers.",
-          "Finally, put on your socks."
-        ]
-      },
-      {
-        "task": "Have breakfast",
-        "items": [
-          "approved breakfast foods",
-          "plate",
-          "spoon",
-          "cup"
-        ],
-        "steps": [
-          "Let's get ready for breakfast.",
-          "First, go to your usual breakfast place.",
-          "Next, check your saved breakfast plan."
-        ]
-      }
-    ]
-  },
-  "schedule": [
-    {
-      "id": "morning_dressing",
-      "title": "Get dressed",
-      "time": "07:30",
-      "days": [
-        "mon",
-        "tue",
-        "wed",
-        "thu",
-        "fri",
-        "sat",
-        "sun"
-      ],
-      "enabled": true,
-      "items": [
-        "clean shirt",
-        "trousers",
-        "socks"
-      ],
-      "instructions": [
-        "Get dressed using the saved dressing routine."
-      ]
-    },
-    {
-      "id": "breakfast",
-      "title": "Have breakfast",
-      "time": "08:00",
-      "days": [
-        "mon",
-        "tue",
-        "wed",
-        "thu",
-        "fri",
-        "sat",
-        "sun"
-      ],
-      "enabled": true,
-      "items": [
-        "approved breakfast foods",
-        "plate",
-        "spoon",
-        "cup"
-      ],
-      "instructions": [
-        "Follow the saved breakfast plan."
-      ]
-    },
-    {
-      "id": "appointment",
-      "title": "Appointment",
-      "time": "10:30",
-      "days": [
-        "mon",
-        "wed",
-        "fri"
-      ],
-      "enabled": false,
-      "items": [
-        "appointment details",
-        "required personal belongings"
-      ],
-      "instructions": [
-        "Check the confirmed appointment details with your caregiver."
-      ]
-    }
+  "morning": [
+    "Wake up and get out of bed safely.",
+    "Use the bathroom and wash your face.",
+    "Brush your teeth.",
+    "Get dressed.",
+    "Have breakfast.",
+    "Check the day's plan or appointments."
+  ],
+  "afternoon": [
+    "Have lunch.",
+    "Drink some water.",
+    "Take a short rest."
+  ],
+  "evening": [
+    "Have an evening snack if planned.",
+    "Spend some time with family.",
+    "Prepare anything needed for tomorrow."
+  ],
+  "night": [
+    "Have dinner.",
+    "Brush your teeth.",
+    "Get ready for bed.",
+    "Check that the bedroom is safe before sleeping."
   ]
 }

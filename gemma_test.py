@@ -1,349 +1,403 @@
 
-import json
 import os
-import time
-import threading
-from datetime import datetime
+import re
+import json
+import base64
+import subprocess
 
+import speech_recognition as sr
 import ollama
+from vosk import Model, KaldiRecognizer
+from difflib import SequenceMatcher
 
-MODEL_NAME = "gemma3:1b"
-DATA_FILE = "routines.json"
+# ========== SETTINGS ==========
 
-file_lock = threading.Lock()
-print_lock = threading.Lock()
-stop_event = threading.Event()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+VOSK_PATH = os.path.join(BASE_DIR, "vosk-model")
+MEMORY_FILE = os.path.join(BASE_DIR, "nora_memory.json")
 
-routine_data = {}
-file_signature = None
-notified_tasks = set()
+AI_MODEL = "gemma3:1b"
+USER_NAME = "Alex"
 
 
-SYSTEM_PROMPT = """
-You are NORA, a compassionate daily-life assistant for a person
-living with Alzheimer's or memory difficulties.
+# ========== SAVED MEMORY ==========
 
-Use short, simple, reassuring sentences.
-Give one manageable instruction at a time.
-Respect the person's choices and dignity.
-Use saved information when relevant.
-Never invent personal memories, appointments, routines, or items.
-Never invent medication instructions or change a dose.
-Do not claim a task is complete without confirmation.
-If information is missing, say so.
-You support daily life but do not replace caregivers or clinicians.
+def load_memory():
+    memory = {}
+
+    if os.path.exists(MEMORY_FILE):
+        try:
+            with open(MEMORY_FILE, "r", encoding="utf-8") as file:
+                memory = json.load(file)
+        except (json.JSONDecodeError, OSError):
+            print("Memory file could not be read. Creating a new one.")
+
+    # Set the preferred name to Alex.
+    memory["user_name"] = USER_NAME
+
+    try:
+        with open(MEMORY_FILE, "w", encoding="utf-8") as file:
+            json.dump(memory, file, indent=2, ensure_ascii=False)
+    except OSError as error:
+        print("Memory saving error:", error)
+
+    return memory
+
+
+memory = load_memory()
+
+
+# ========== DAILY ROUTINES ==========
+ROUTINES_FILE = os.path.join(BASE_DIR, "routines.json")
+
+
+def load_routines():
+    try:
+        with open(ROUTINES_FILE, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        if not isinstance(data, dict):
+            raise ValueError("The routines file must contain a JSON object.")
+
+        return data
+
+    except FileNotFoundError:
+        print("Warning: routines.json was not found.")
+        return {}
+
+    except (json.JSONDecodeError, OSError, ValueError) as error:
+        print("Could not load routines:", error)
+        return {}
+
+
+
+
+# ========== CLEAN AI RESPONSES ==========
+
+def clean_response(text):
+    # Remove common emoji, pictograph and variation-selector characters.
+    emoji_pattern = (
+        "["
+        "\U0001F000-\U0001FAFF"
+        "\U00002600-\U000027BF"
+        "\U0000FE00-\U0000FE0F"
+        "\U0001F1E6-\U0001F1FF"
+        "\U0000200D"
+        "\U000020E3"
+        "\U0001F3FB-\U0001F3FF"
+        "]+"
+    )
+
+    text = re.sub(emoji_pattern, "", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r" *\n *", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    return text.strip()
+
+
+def answer_routine(user_text):
+    """Answer explicit routine questions from the local JSON file."""
+    text = user_text.lower().strip()
+
+    # Only handle questions that clearly ask about a routine.
+    routine_requests = (
+        "routine", "daily schedule", "morning schedule",
+        "afternoon schedule", "evening schedule", "night schedule",
+        "what is next in my schedule",
+        "what is next in my routine"
+    )
+
+    if not any(phrase in text for phrase in routine_requests):
+        return None
+
+    routines = load_routines()
+
+    if not routines:
+        return "I couldn't load your saved routines. Please check the routines file."
+
+    # Only use recognized routine categories with a list of steps.
+    valid_periods = ("morning", "afternoon", "evening", "night")
+    routines = {
+        period: routines[period]
+        for period in valid_periods
+        if isinstance(routines.get(period), list)
+    }
+
+    if not routines:
+        return "Your routine file doesn't contain any valid routines yet."
+
+    selected_period = next(
+        (period for period in valid_periods if period in text and period in routines),
+        None
+    )
+
+    if selected_period is None:
+        selected_period = next(iter(routines), None)
+
+    if selected_period is None:
+        return "Which routine would you like: morning, afternoon, evening, or night?"
+
+    steps = routines[selected_period]
+
+    if not steps:
+        return f"Your {selected_period} routine has no saved steps yet."
+
+    answer = f"Here is your {selected_period} routine. "
+    answer += " ".join(
+        f"Step {index + 1}: {step}"
+        for index, step in enumerate(steps)
+    )
+    return answer
+
+# ========== NORA'S VOICE: WINDOWS SPEECH ==========
+
+def speak(text):
+    text = clean_response(str(text))
+
+    if not text:
+        return
+
+    print(f"\nNORA: {text}")
+
+    # Encode the text safely for PowerShell.
+    message_b64 = base64.b64encode(
+        text.encode("utf-8")
+    ).decode("ascii")
+
+    powershell_script = f"""
+Add-Type -AssemblyName System.Speech
+$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
+$synth.Volume = 100
+$synth.Rate = 0
+$message = [System.Text.Encoding]::UTF8.GetString(
+    [System.Convert]::FromBase64String("{message_b64}")
+)
+$synth.Speak($message)
+$synth.Dispose()
+"""
+
+    encoded_script = base64.b64encode(
+        powershell_script.encode("utf-16le")
+    ).decode("ascii")
+
+    try:
+        subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-EncodedCommand",
+                encoded_script
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=120
+        )
+    except Exception as error:
+        print("NORA speech error:", error)
+
+
+# ========== LOAD VOSK SPEECH RECOGNITION ==========
+
+if not os.path.isdir(VOSK_PATH):
+    raise FileNotFoundError(
+        f"Vosk model folder not found: {VOSK_PATH}\n"
+        "Check that the vosk-model folder is inside your project folder."
+    )
+
+print("Loading Vosk model...")
+vosk_model = Model(VOSK_PATH)
+print("Vosk is ready!")
+
+
+# ========== MICROPHONE ==========
+
+microphone_recognizer = sr.Recognizer()
+microphone_recognizer.dynamic_energy_threshold = True
+microphone_recognizer.pause_threshold = 0.8
+microphone_recognizer.non_speaking_duration = 0.5
+
+
+def listen():
+    try:
+        with sr.Microphone(sample_rate=16000) as source:
+            print("\nNORA is listening. Speak clearly...")
+
+            # Calibrate briefly for room noise.
+            microphone_recognizer.adjust_for_ambient_noise(
+                source,
+                duration=0.6
+            )
+
+            audio = microphone_recognizer.listen(
+                source,
+                timeout=15,
+                phrase_time_limit=12
+            )
+
+        raw_audio = audio.get_raw_data(
+            convert_rate=16000,
+            convert_width=2
+        )
+
+        recognizer = KaldiRecognizer(vosk_model, 16000)
+
+        # Feed the recording to Vosk in chunks.
+        chunk_size = 4000
+
+        for start in range(0, len(raw_audio), chunk_size):
+            recognizer.AcceptWaveform(
+                raw_audio[start:start + chunk_size]
+            )
+
+        result = json.loads(recognizer.FinalResult())
+        recognized_text = result.get("text", "").strip()
+
+        if recognized_text:
+            print(f"\nYOU SAID: {recognized_text}")
+            return recognized_text
+
+        print("I couldn't recognize those words. Please try again.")
+        return ""
+
+    except sr.WaitTimeoutError:
+        print("I didn't hear speech. Please try again.")
+        return ""
+
+    except Exception as error:
+        print("Listening error:", repr(error))
+        return ""
+
+
+# ========== GEMMA AI ==========
+
+
+system_prompt = f"""
+You are NORA, a friendly, patient, respectful and helpful voice-controlled
+assistive AI for everyday life.
+
+The user's preferred name is {memory["user_name"]}.
+Use the name Alex when addressing the user.
+Never invent or change the user's name.
+
+YOUR PURPOSE:
+Help the user with a wide range of everyday needs. You are not limited
+to routines or a single task.
+
+YOU CAN HELP WITH:
+- Answering general knowledge questions.
+- Explaining difficult topics in simple language.
+- Helping plan everyday activities and organize tasks.
+- Giving step-by-step instructions.
+- Supporting memory with information actually available to you.
+- Helping the user understand their schedule and routines.
+- Brainstorming ideas, writing messages and solving everyday problems.
+- Offering calm, respectful assistance when the user feels confused.
+- Asking a short clarification question when the request is unclear.
+
+IMPORTANT BEHAVIOUR:
+- Answer the user's actual question instead of forcing it into a routine.
+- Do not assume the user needs help with a particular task.
+- Offer choices when several approaches may help.
+- Give one step at a time when the user needs instructions.
+- Be patient if the user repeats a question.
+- Do not invent appointments, memories, personal details or completed actions.
+- Only claim to remember information that is actually available.
+- Be honest when you do not know something.
+- For emergencies, encourage contacting local emergency services or a
+  trusted person as appropriate.
+- You are an AI assistant, not a substitute for professional medical care.
+
+VOICE RESPONSE STYLE:
+- Use simple, natural, warm language.
+- Keep answers concise and easy to understand when spoken aloud.
+- Use plain text. Do not use emojis or decorative symbols.
+- Avoid unnecessarily complicated words.
 """
 
 
-def load_schedule(force=False):
-    """Load updated JSON data when the file changes."""
-    global routine_data, file_signature
-
-    try:
-        stat = os.stat(DATA_FILE)
-        signature = (stat.st_mtime_ns, stat.st_size)
-
-        if not force and signature == file_signature:
-            return False
-
-        with open(DATA_FILE, "r", encoding="utf-8") as file:
-            new_data = json.load(file)
-
-        if not isinstance(new_data, dict):
-            raise ValueError("The JSON root must be an object.")
-
-        with file_lock:
-            routine_data = new_data
-            file_signature = signature
-
-        with print_lock:
-            print("\n[NORA SYSTEM] Schedule loaded or updated.")
-
-        return True
-
-    except (OSError, json.JSONDecodeError, ValueError) as error:
-        with print_lock:
-            print("\n[NORA SYSTEM] Could not load schedule:", error)
-
-        return False
-
-
-def get_data():
-    """Return a snapshot of the current schedule."""
-    with file_lock:
-        return json.loads(json.dumps(routine_data))
-
-
-def show_routines():
-    data = get_data()
-    routines = data.get("routines", {}).get("morning", [])
-
-    if not routines:
-        print("\nNORA: No morning routines are saved.\n")
-        return
-
-    print("\nNORA: Here are the saved morning activities:")
-
-    for activity in routines:
-        print("\nActivity:", activity.get("task", "Unnamed activity"))
-        print("Items:", ", ".join(activity.get("items", [])))
-
-        steps = activity.get("steps", [])
-        if steps:
-            print("First step:", steps[0])
-
-    print()
-
-
-def find_activity(task_name):
-    data = get_data()
-
-    for activity in data.get("routines", {}).get("morning", []):
-        if activity.get("task", "").strip().lower() == task_name.lower():
-            return activity
-
-    return None
-
-
-def show_dressing_items():
-    activity = find_activity("Get dressed")
-
-    if not activity:
-        print("\nNORA: I don't have saved dressing information yet.\n")
-        return
-
-    items = activity.get("items", [])
-
-    if not items:
-        print("\nNORA: No dressing items have been saved.\n")
-        return
-
-    print("\nNORA: Here are the saved dressing items:")
-    for item in items:
-        print("-", item)
-    print()
-
-
-def guide_dressing():
-    activity = find_activity("Get dressed")
-
-    if not activity or not activity.get("steps"):
-        print("\nNORA: I don't have a saved dressing routine yet.\n")
-        return
-
-    print("\nNORA: Let's follow your saved dressing routine.")
-
-    for index, step in enumerate(activity["steps"]):
-        print("\nNORA:", step)
-
-        if index == len(activity["steps"]) - 1:
-            break
-
-        answer = input("Ready for the next step? (yes/no): ").strip().lower()
-
-        if answer not in ("yes", "y"):
-            print("\nNORA: That's okay. We can pause here.")
-            print("Type 'guide dressing' when you want to try again.\n")
-            return
-
-    print("\nNORA: We've reached the end of the saved instructions.")
-    print("Please make sure everything feels comfortable and safe.\n")
-
-
-def show_schedule():
-    data = get_data()
-    schedule = data.get("schedule", [])
-
-    if not schedule:
-        print("\nNORA: No scheduled commitments are saved.\n")
-        return
-
-    print("\nNORA: Here is the saved schedule:")
-
-    for task in schedule:
-        status = "enabled" if task.get("enabled") is True else "disabled"
-        days = ", ".join(task.get("days", []))
-
-        print(
-            f"- {task.get('time', 'No time')} | "
-            f"{task.get('title', 'Unnamed task')} | "
-            f"{days} | {status}"
-        )
-
-        items = task.get("items", [])
-        if items:
-            print("  Items:", ", ".join(items))
-
-    print()
-
-
-def reminder_worker():
-    """
-    Check the local clock and file in the background.
-    Reminders are issued once per task per local calendar day,
-    within five minutes after its scheduled time.
-    """
-    global notified_tasks
-
-    while not stop_event.is_set():
-        load_schedule()
-
-        data = get_data()
-        now = datetime.now()
-        today = now.strftime("%a").lower()
-        today_key = now.strftime("%Y-%m-%d")
-        current_minutes = now.hour * 60 + now.minute
-
-        for task in data.get("schedule", []):
-            if task.get("enabled") is not True:
-                continue
-
-            task_id = task.get("id")
-            title = task.get("title", "Scheduled activity")
-            time_text = task.get("time", "")
-            days = task.get("days", [])
-
-            if not task_id or today not in days:
-                continue
-
-            try:
-                hour_text, minute_text = time_text.split(":")
-                scheduled_minutes = int(hour_text) * 60 + int(minute_text)
-
-                if not (0 <= int(hour_text) <= 23 and
-                        0 <= int(minute_text) <= 59):
-                    continue
-
-            except (ValueError, TypeError):
-                continue
-
-            # Only notify during the five-minute window after the time.
-            if 0 <= current_minutes - scheduled_minutes <= 4:
-                reminder_key = (today_key, task_id)
-
-                if reminder_key not in notified_tasks:
-                    notified_tasks.add(reminder_key)
-
-                    items = task.get("items", [])
-
-                    with print_lock:
-                        print("\n")
-                        print("=" * 40)
-                        print("NORA REMINDER")
-                        print("=" * 40)
-                        print(f"It's time for: {title}")
-
-                        if items:
-                            print("Items to check:")
-                            for item in items:
-                                print("-", item)
-
-                        instructions = task.get("instructions", [])
-                        if instructions:
-                            print("Saved instruction:", instructions[0])
-
-                        print("Please check the schedule and confirm")
-                        print("the activity is still appropriate.")
-                        print("=" * 40)
-                        print("You can type a command at the You: prompt.\n")
-
-        stop_event.wait(5)
-
-
-def chat_with_nora(user_text, messages):
-    data = get_data()
-    context = json.dumps(data, ensure_ascii=False, indent=2)
-
-    current_messages = messages + [
-        {
-            "role": "system",
-            "content": (
-                "Here is the current saved routine and schedule data. "
-                "Use it only when relevant. Do not assume a task is "
-                "scheduled today unless its day and time support that. "
-                "Do not claim a reminder was delivered unless the "
-                "program confirms it.\n" + context
-            )
-        },
-        {"role": "user", "content": user_text}
-    ]
-
-    try:
-        response = ollama.chat(
-            model=MODEL_NAME,
-            messages=current_messages
-        )
-
-        answer = response["message"]["content"].strip()
-        print("\nNORA:", answer, "\n")
-
-        messages.append({"role": "user", "content": user_text})
-        messages.append({"role": "assistant", "content": answer})
-
-    except Exception as error:
-        print("\nNORA could not contact Gemma.")
-        print("Check that Ollama is running.")
-        print("Details:", error, "\n")
-
+# ========== MAIN PROGRAM ==========
 
 def main():
-    if not load_schedule(force=True):
-        print("Please fix routines.json before starting NORA.")
+    try:
+        ollama.list()
+
+        speak(
+            f"Hello! I'm NORA. "
+            f"Hi {memory['user_name']}. "
+            "I'm ready to listen. What would you like to talk about?"
+        )
+
+    except Exception as error:
+        print("Ollama connection error:", repr(error))
+        speak("I couldn't connect to my AI brain. Please check Ollama.")
         return
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    while True:
+       
 
-    print("\n" + "=" * 44)
-    print("NORA - Your Daily-Life Companion")
-    print("=" * 44)
-    print("Schedule monitoring is active while this program runs.")
-    print("\nCommands:")
-    print("  routine              - View saved morning routines")
-    print("  items for dressing   - List dressing items")
-    print("  guide dressing       - Follow dressing steps")
-    print("  schedule             - View scheduled commitments")
-    print("  reload               - Check for file updates now")
-    print("  exit                 - Close NORA")
-    print("\nYou can also talk to NORA normally.\n")
+        user_text = listen()
 
-    worker = threading.Thread(target=reminder_worker, daemon=True)
-    worker.start()
+        if not user_text:
+            continue
+        if should_stop(user_text):
+            speak("Goodbye, Alex. I'll be here when you need me.")
+            break
+       
+        reply = answer_routine(user_text)
 
-    try:
-        while True:
-            try:
-                user_text = input("You: ").strip()
-            except (KeyboardInterrupt, EOFError):
-                break
+        if reply is None:
+            reply = ask_gemma(user_text)
 
-            if not user_text:
-                continue
+        speak(reply)
 
-            command = user_text.lower()
 
-            if command == "exit":
-                break
-            elif command == "routine":
-                show_routines()
-            elif command == "items for dressing":
-                show_dressing_items()
-            elif command == "guide dressing":
-                guide_dressing()
-            elif command == "schedule":
-                show_schedule()
-            elif command == "reload":
-                if load_schedule(force=True):
-                    print("NORA: I checked the schedule file.\n")
-                else:
-                    print("NORA: I couldn't reload the file. Check its format.\n")
-            else:
-                chat_with_nora(user_text, messages)
+def should_stop(user_text):
+    """Recognize common voice commands for stopping NORA."""
+    text = re.sub(r"[^a-z0-9\s]", "", user_text.lower())
+    text = " ".join(text.split())
 
-    finally:
-        stop_event.set()
-        worker.join(timeout=2)
-        print("\nNORA: Goodbye. Take care!")
+    exact_commands = {
+        "stop",
+        "stop nora",
+        "nora stop",
+        "nora please stop",
+        "please stop",
+        "stop listening",
+        "nora stop listening",
+        "exit",
+        "exit nora",
+        "quit",
+        "quit nora",
+        "shut down",
+        "nora shut down",
+        "turn off",
+        "turn off nora",
+        "goodbye",
+        "goodbye nora"
+    }
 
+    if text in exact_commands:
+        return True
+
+    # Allow common recognition errors in short stop commands.
+    words = text.split()
+
+    if len(words) <= 3 and words:
+        last_word = words[-1]
+
+        for command in ("stop", "exit", "quit"):
+            if SequenceMatcher(None, last_word, command).ratio() >= 0.80:
+                return True
+
+    return False
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nNORA stopped.")
+    finally:
+        print("NORA has shut down.")

@@ -1,17 +1,25 @@
 # NORA — AI Daily-Life Assistant for Memory Support
 
-**NORA** is an empathetic, accessible web companion designed specifically for people living with Alzheimer's disease, mild cognitive impairment, and memory difficulties.
+**NORA** is an empathetic, accessible daily-life assistant prototype designed specifically to support people living with Alzheimer's disease, mild cognitive impairment, and memory difficulties with everyday activities, routines, and daily commitments.
 
-Built with a dignified, reassuring design philosophy:
+The project combines:
+1. **An Offline AI Backend** powered by Python, Gemma 3:1B (via Ollama), and local routine management.
+2. **A Responsive, Accessible Web Frontend** built with React + Vite, designed with dignified, high-contrast, calm ergonomics and voice narration.
+
+---
+
+## 🌸 Design Philosophy & Accessibility
+
+Memory difficulties can make daily routines, remembering necessary items, and managing commitments challenging. NORA is designed with deep empathy and respect:
 - **Soft cream & linen backgrounds** with **muted sage green accents**
-- **Dark, high-contrast readable text**
+- **Dark, high-contrast readable text** (WCAG AAA compliant)
 - **Large fonts, generous spacing, and oversized buttons** (minimum 52px tap targets)
 - **Zero clutter, zero jarring animations, zero tiny iconography**
 - **Accessible speech narration (Text-to-Speech)** using the browser's native speech engine
 
 ---
 
-## 🧭 Live Screens & Functionality
+## 🧭 Frontend Screens & Features
 
 ### 1. Home Dashboard
 - **Personalized Orientation Greeting:** Warm time-of-day greeting for Eleanor Vance with date and location grounding.
@@ -22,7 +30,7 @@ Built with a dignified, reassuring design philosophy:
 
 ### 2. Daily Routine
 - **Morning, Afternoon, and Evening Sections:** Realistic, respectful daily flow (stretches, tea, garden walk, lunch, nap, family visit, supper, memory photo album).
-- **Interactive Completion:** Working buttons to check off activities with immediate positive encouragement toasts ("Well done, Eleanor! A gentle step completed.").
+- **Interactive Completion:** Working buttons to check off activities with immediate positive encouragement toasts (*"Well done, Eleanor! A gentle step completed."*).
 - **Daily Progress Bar:** Shows completed count (e.g. 3 of 11) with percentage and encouraging visual indicator.
 - **Demo Reset:** One-click button to reset tasks to uncompleted for easy testing and demonstrations.
 
@@ -60,184 +68,65 @@ Built with a dignified, reassuring design philosophy:
 
 ---
 
-## 📁 Project Structure
+## 🧠 Python Backend & Offline AI
 
-```
-d:\xnora\
-├── index.html                   # Entry HTML with accessible Google Fonts preconnect
-├── package.json                 # Dependencies (React 18, Vite, Lucide-react)
-├── vite.config.js               # Vite configuration
-├── vercel.json                  # Vercel SPA deployment configuration
-├── .env.example                 # Environment variables reference
-├── src\
-│   ├── main.jsx                 # React root render
-│   ├── App.jsx                  # Main application structure, tabs & modals
-│   ├── App.css                  # Component layout, buttons, cards & chat styling
-│   ├── index.css                # Accessible design tokens, themes & text-sizes
-│   ├── context\
-│   │   ├── AccessibilityContext.jsx  # Text size, contrast theme, voice narration
-│   │   └── RoutineContext.jsx        # Daily activities state, persistence, progress
-│   ├── data\
-│   │   ├── userProfile.js            # Fictional profile and orientation facts
-│   │   ├── routineData.js            # Morning, afternoon, evening activities
-│   │   ├── contactsData.js           # Trusted family & doctor contacts
-│   │   └── mockChatResponses.js      # Dementia care dialogue engine & prompt chips
-│   ├── services\
-│   │   ├── api.js                    # API client with health check & backend integration
-│   │   ├── chatService.js            # Bridge between Python backend and local mock
-│   │   └── speechService.js          # Browser SpeechSynthesis helper
-│   └── components\
-│       ├── common\
-│       │   ├── Header.jsx            # Live clock, voice toggle, emergency prompt
-│       │   ├── Navigation.jsx        # Accessible tab buttons with status badges
-│       │   ├── NoticeBanner.jsx      # Transparent demo status and backend checker
-│       │   ├── WhatShouldIDoModal.jsx# Reassuring "What do I do now?" modal
-│       │   └── CallContactModal.jsx  # Simulated call and quick note modal
-│       ├── home\
-│       │   └── HomeDashboard.jsx     # Greeting, hero CTA, up next & quick tiles
-│       ├── routine\
-│       │   ├── DailyRoutine.jsx      # Timeline with filter tabs and progress bar
-│       │   └── ActivityCard.jsx      # Large tap checkbox, time, location & audio
-│       ├── chat\
-│       │   ├── TalkToNora.jsx        # Chat window, prompt chips, typing feedback
-│       │   └── ChatMessage.jsx       # Message bubble with audio read-aloud
-│       ├── contacts\
-│       │   └── TrustedContacts.jsx   # Contact cards and caregiver spotlight
-│       └── settings\
-│           └── Settings.jsx          # Text size, contrast, voice, and backend guide
-```
+- **Local AI Conversation:** Gemma 3:1B model through Ollama.
+- **Locally Stored Routines:** Using JSON (`routines.json`, `nora_memory.json`).
+- **Saved-Item Lookup:** Step-by-step guidance for dressing and daily items with pauses.
+- **Schedule Management:** Display with times, days, and enabled status.
+- **Scheduled Reminders:** Automated reminder checks while the program is running.
+
+### How to Run the Python Backend
+1. Install Ollama: [https://ollama.com](https://ollama.com).
+2. Download the Gemma model: `ollama run gemma3:1b`.
+3. Install the Python Ollama package: `pip install ollama`.
+4. Open a terminal in the project folder and run:
+   ```bash
+   python gemma_test.py
+   ```
 
 ---
 
-## 🚀 Running the Project Locally
-
-### Prerequisites
-Node.js (v18+) and npm. Portable Node.js is already set up in `D:\xnora\nodejs`.
+## 💻 How to Run the Web Frontend
 
 ### Development Server
-```powershell
-# From the project root (D:\xnora):
+```bash
+npm install
 npm run dev
 ```
-Open your browser to `http://localhost:3000`.
+Open `http://localhost:3000` in your browser.
 
 ### Production Build & Preview
-```powershell
+```bash
 npm run build
 npm run preview
 ```
 
 ---
 
-## ☁️ Deployment to Vercel
+## ☁️ Deployment on Vercel
 
-The application is preconfigured with `vercel.json` for seamless zero-configuration deployment to Vercel:
-
-1. **Push this repository to GitHub / GitLab / Bitbucket.**
-2. **Log into [Vercel](https://vercel.com).**
-3. **Import the repository:**
-   - Framework Preset: **Vite**
-   - Root Directory: `./` (or leave default)
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-4. **Environment Variables (Optional):**
-   - If your Python backend is already deployed (e.g. on Render, Fly.io, or Railway), set:
-     ```
-     VITE_API_BASE_URL=https://your-python-backend.com
-     VITE_USE_MOCK_CHAT=false
-     ```
-5. Click **Deploy**. Vercel will build and serve NORA with global CDN edge routing.
+The frontend includes `vercel.json` and is ready for one-click deployment:
+1. Import this repository into [Vercel](https://vercel.com).
+2. Framework Preset: **Vite**.
+3. Build Command: `npm run build`.
+4. Output Directory: `dist`.
+5. Deploy!
 
 ---
 
-## 🔌 Connecting Your Python / Gemma Backend
+## 🔌 Connecting the Python Backend & Frontend
 
-The frontend is built to communicate with a Python backend without any changes to the UI components.
+1. Ensure the Python backend exposes `GET /api/health` and `POST /api/chat`.
+2. In the frontend root, create a `.env.local` file:
+   ```env
+   VITE_API_BASE_URL=http://localhost:8000
+   VITE_USE_MOCK_CHAT=false
+   ```
+3. The frontend will automatically detect the live backend, display the green **"Backend Live"** badge, and send all queries to your Gemma model. If the backend is ever offline, NORA automatically falls back to local empathetic responses without crashing.
 
-### 1. Expected Endpoints
+---
 
-Your Python backend (FastAPI / Flask) should implement two endpoints:
+## 🛡️ Safety & Disclaimer
 
-#### `GET /api/health`
-Health check endpoint to verify backend availability.
-- **Response:** `{"status": "ok", "model": "gemma-2-9b-it"}`
-
-#### `POST /api/chat`
-Handles patient conversations.
-- **Request Body:**
-  ```json
-  {
-    "message": "What should I do right now?",
-    "history": [
-      { "role": "user", "content": "Hello" },
-      { "role": "assistant", "content": "Hello Eleanor! How can I help?" }
-    ],
-    "context": {
-      "userName": "Eleanor Vance",
-      "nextActivity": "Gentle Garden Patio Walk",
-      "currentTime": "2026-10-17T15:30:00.000Z"
-    }
-  }
-  ```
-- **Response:**
-  ```json
-  {
-    "reply": "Your next gentle activity is a garden walk on the patio. Take your time, Eleanor.",
-    "actionSuggestion": {
-      "type": "navigate",
-      "target": "routine",
-      "label": "View Daily Routine"
-    }
-  }
-  ```
-
-### 2. Fast Python / FastAPI Example Starter
-```python
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
-
-app = FastAPI(title="NORA Gemma Backend")
-
-# Allow CORS for the frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-class ChatContext(BaseModel):
-    userName: Optional[str] = "Eleanor Vance"
-    nextActivity: Optional[str] = ""
-    currentTime: Optional[str] = ""
-
-class ChatRequest(BaseModel):
-    message: str
-    history: Optional[List[dict]] = []
-    context: Optional[ChatContext] = None
-
-@app.get("/api/health")
-def health():
-    return {"status": "ok", "service": "NORA Gemma Companion"}
-
-@app.post("/api/chat")
-def chat(req: ChatRequest):
-    # Here, pipe req.message + context into your Gemma model pipeline
-    # (e.g. via Ollama, HuggingFace transformers, or vLLM)
-    prompt = f"System: You are NORA, a calm, reassuring daily assistant for {req.context.userName} who has memory difficulties. Patient: {req.message}"
-    
-    # Example response:
-    reply = f"Hello {req.context.userName}, you are safe at home. Your next activity is {req.context.nextActivity}."
-    return {"reply": reply}
-```
-
-### 3. Activating the Backend in the Frontend
-Create a `.env.local` file in `D:\xnora`:
-```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_USE_MOCK_CHAT=false
-```
-When running, the frontend will automatically detect the live backend, display the green **"Backend Live"** badge, and send all queries to your Gemma model. If the backend ever disconnects, the frontend automatically falls back to local empathetic responses without crashing.
+NORA is an assistive technology prototype, not a cure, diagnosis, or clinical treatment for Alzheimer's disease or any dementia-related illness. It is designed to assist and reassure, not to replace family caregivers, medical providers, or healthcare professionals.

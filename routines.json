@@ -1,0 +1,27 @@
+
+{
+  "morning": [
+    "Wake up and get out of bed safely.",
+    "Use the bathroom and wash your face.",
+    "Brush your teeth.",
+    "Get dressed.",
+    "Have breakfast.",
+    "Check the day's plan or appointments."
+  ],
+  "afternoon": [
+    "Have lunch.",
+    "Drink some water.",
+    "Take a short rest."
+  ],
+  "evening": [
+    "Have an evening snack if planned.",
+    "Spend some time with family.",
+    "Prepare anything needed for tomorrow."
+  ],
+  "night": [
+    "Have dinner.",
+    "Brush your teeth.",
+    "Get ready for bed.",
+    "Check that the bedroom is safe before sleeping."
+  ]
+}
